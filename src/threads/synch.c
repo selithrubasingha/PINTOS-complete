@@ -187,6 +187,8 @@ lock_init (struct lock *lock)
 
   lock->holder = NULL;
   sema_init (&lock->semaphore, 1);
+
+  lock->max_priority = PRI_MIN;  /* Initialize max_priority to the lowest priority */
 }
 
 /* Acquires LOCK, sleeping until it becomes available if
@@ -253,7 +255,7 @@ lock_held_by_current_thread (const struct lock *lock)
 
   return lock->holder == thread_current ();
 }
-
+
 /* One semaphore in a list. */
 struct semaphore_elem 
   {
