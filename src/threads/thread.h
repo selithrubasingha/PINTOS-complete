@@ -94,6 +94,11 @@ struct thread
     struct list_elem elem;              /* List element. */
     int64_t wakeup_tick;                 /* Tick to wake up the thread. */
 
+    // priority donation related members
+    int base_priority;                 /* Base priority of the thread. */
+    struct list locks_held;                  /* List of locks held by the thread. */
+    struct lock *lock_waiting_on;              /* Lock the thread is waiting on. */
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
