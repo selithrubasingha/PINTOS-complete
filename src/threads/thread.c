@@ -82,6 +82,8 @@ bool thread_compare_priority(const struct list_elem *a, const struct list_elem *
 }
 
 
+int load_avg = 0; // global variable to store the system load average
+
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -104,7 +106,8 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&all_list);
 
-  
+  load_avg = INT_TO_FP(0); // Initialize load_avg to 0 in fixed-point representation
+
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -550,7 +553,15 @@ init_thread (struct thread *t, const char *name, int priority)
   t->base_priority = priority;
   t->lock_waiting_on = NULL;
 
+  // initializi ng fixed point logic
 
+  if (t== initial_thread) {
+    t->nice = 0;
+    t->recent_cpu = INT_TO_FP(0);
+  } else {
+    t->nice = thread_current()->nice;
+    t->recent_cpu = thread_current()->recent_cpu;
+  }
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);

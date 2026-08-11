@@ -99,6 +99,10 @@ struct thread
     struct list locks_held;                  /* List of locks held by the thread. */
     struct lock *lock_waiting_on;              /* Lock the thread is waiting on. */
 
+    // fixed point logic
+    int nice;
+    int recent_cpu;
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
