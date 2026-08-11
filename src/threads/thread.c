@@ -353,21 +353,71 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+
+/* Recomputes T's effective priority as the max of its base priority
+   and the priorities of all threads waiting on locks T currently holds. */
+void
+update_priority (struct thread *t)
+{
+  int max_priority = t->base_priority;
+  struct list_elem *e;
+
+  for (e = list_begin (&t->locks_held); e != list_end (&t->locks_held); e = list_next (e))
+    {
+      struct lock *held_lock = list_entry (e, struct lock, elem);
+      if (!list_empty (&held_lock->semaphore.waiters))
+        {
+          struct thread *top = list_entry (
+              list_max (&held_lock->semaphore.waiters, thread_compare_priority, NULL),
+              struct thread, elem);
+          if (top->priority > max_priority)
+            max_priority = top->priority;
+        }
+    }
+
+  t->priority = max_priority;
+}
+
+
+/* thread.c */
+  bool
+  thread_should_yield (int priority)
+  {
+    return !list_empty (&ready_list) &&
+           list_entry (list_front (&ready_list), struct thread, elem)->priority > priority;
+  }
+
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
-thread_set_priority (int new_priority) 
+thread_set_priority (int new_priority)
 {
-  thread_current ()->priority = new_priority;
+  enum intr_level old_level = intr_disable ();
+  struct thread *cur = thread_current ();
 
-if (!list_empty (&ready_list)) 
-  {
-    struct thread *highest_ready = list_entry (list_front (&ready_list), struct thread, elem);
-    if (thread_current ()->priority < highest_ready->priority) 
-      {
-        thread_yield ();
-      }
-  }
+  cur->base_priority = new_priority;
+  update_priority (cur);   /* recompute effective priority from base + donations */
+
+  intr_set_level (old_level);
+
+  if (thread_should_yield (cur->priority))
+    thread_yield ();
 }
+
+
+// void
+// thread_set_priority (int new_priority) 
+// {
+//   thread_current ()->priority = new_priority;
+
+// if (!list_empty (&ready_list)) 
+//   {
+//     struct thread *highest_ready = list_entry (list_front (&ready_list), struct thread, elem);
+//     if (thread_current ()->priority < highest_ready->priority) 
+//       {
+//         thread_yield ();
+//       }
+//   }
+// }
 
 /* Returns the current thread's priority. */
 int

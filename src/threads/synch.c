@@ -277,29 +277,15 @@ lock_release (struct lock *lock)
   struct thread *current_thread = thread_current ();
   list_remove (&lock->elem);
 
-  current_thread->priority = current_thread->base_priority;
 
 //If locks_held is not empty, calculate the absolute maximum priority among all threads waiting across all remaining locks.
 
-
-
-  if (!list_empty(&current_thread->locks_held)) {
-    struct list_elem *e;
-    for (e = list_begin(&current_thread->locks_held); e != list_end(&current_thread->locks_held); e = list_next(e)) {
-      struct lock *held_lock = list_entry(e, struct lock, elem);
-      if (!list_empty(&held_lock->semaphore.waiters)) {
-        struct thread *highest_waiting_thread = list_entry(list_max(&held_lock->semaphore.waiters, thread_compare_priority, NULL), struct thread, elem);
-        if (highest_waiting_thread->priority > current_thread->priority) {
-          current_thread->priority = highest_waiting_thread->priority;
-        }
-      }
-    }
-  }
-
-
+  update_priority (current_thread);
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 
+  if (thread_should_yield (current_thread->priority))
+    thread_yield ();
 
 
 

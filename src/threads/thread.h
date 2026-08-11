@@ -115,6 +115,13 @@ extern bool thread_mlfqs;
 
 bool thread_compare_priority (const struct list_elem *a, const struct list_elem *b, void *aux);
 
+/* thread.h */
+bool thread_should_yield (int priority);
+
+
+bool thread_should_yield (int priority);
+void update_priority (struct thread *t);
+
 void thread_init (void);
 void thread_start (void);
 
