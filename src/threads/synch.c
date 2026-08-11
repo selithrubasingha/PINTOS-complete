@@ -31,6 +31,7 @@
 #include <string.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "devices/timer.h"
 #include "threads/fixed-point.h"
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
@@ -211,30 +212,31 @@ lock_acquire (struct lock *lock)
 
   struct thread *current_thread = thread_current ();
 
-  if (lock->holder != NULL) {
-    current_thread->lock_waiting_on = lock;
+  if (!thread_mlfqs){
+    if (lock->holder != NULL) {
+      current_thread->lock_waiting_on = lock;
 
-    struct thread *holder_thread = lock->holder;
+      struct thread *holder_thread = lock->holder;
 
-    for (int i = 0; i < 8; i++){
-      if (holder_thread == NULL) {
-        break;
-      }
+      for (int i = 0; i < 8; i++){
+        if (holder_thread == NULL) {
+          break;
+        }
 
-      if (current_thread->priority > holder_thread->priority) {
-        holder_thread->priority = current_thread->priority;
-      } else {
-        break;
-      }
+        if (current_thread->priority > holder_thread->priority) {
+          holder_thread->priority = current_thread->priority;
+        } else {
+          break;
+        }
 
-      if (holder_thread->lock_waiting_on != NULL) {
-        holder_thread = holder_thread->lock_waiting_on->holder;
-      } else {
-        break;
+        if (holder_thread->lock_waiting_on != NULL) {
+          holder_thread = holder_thread->lock_waiting_on->holder;
+        } else {
+          break;
+        }
       }
     }
   }
-
 
   sema_down (&lock->semaphore);
   current_thread->lock_waiting_on = NULL;
@@ -280,8 +282,8 @@ lock_release (struct lock *lock)
 
 
 //If locks_held is not empty, calculate the absolute maximum priority among all threads waiting across all remaining locks.
-
-  update_priority (current_thread);
+  if (!thread_mlfqs)
+    update_priority (current_thread);
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 
