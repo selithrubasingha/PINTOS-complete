@@ -11,6 +11,8 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "devices/timer.h"
+#include "threads/fixed-point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -140,7 +142,7 @@ thread_tick (void)
 {
   struct thread *t = thread_current ();
 
-  /* Update statistics. */
+  /* --- EXISTING STATISTICS CODE (KEEP THIS) --- */
   if (t == idle_thread)
     idle_ticks++;
 #ifdef USERPROG
@@ -149,6 +151,37 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
+  /* -------------------------------------------- */
+
+  /* --- MLFQS HEARTBEAT --- */
+  if (thread_mlfqs) 
+    {
+      int64_t ticks = timer_ticks ();
+
+      /* 1. EVERY SINGLE TICK: Increment recent_cpu by 1 for the running thread */
+      if (t != idle_thread) 
+        {
+          // TODO: Use ADD_MIX to add 1 to t->recent_cpu
+        }
+
+      /* 2. EVERY 100TH TICK (1 Second): Update load_avg and all recent_cpus */
+      if (ticks % TIMER_FREQ == 0) 
+        {
+          // TODO: Calculate 'ready_threads'. 
+          // (Hint: list_size(&ready_list) + 1 if the current thread is not the idle_thread)
+
+          // TODO: Calculate the new global load_avg using the formula
+          
+          // TODO: Iterate through `all_list` and recalculate recent_cpu for EVERY thread.
+        }
+
+      /* 3. EVERY 4TH TICK: Update priority for all threads */
+      if (ticks % 4 == 0) 
+        {
+          // TODO: Iterate through `all_list` and recalculate priority for EVERY thread.
+        }
+    }
+  /* ----------------------- */
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
