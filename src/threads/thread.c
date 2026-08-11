@@ -510,7 +510,8 @@ thread_set_nice (int nice UNUSED)
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
+  struct thread *cur = thread_current ();
+  return cur->nice;
   return 0;
 }
 
@@ -519,7 +520,10 @@ int
 thread_get_load_avg (void) 
 {
   /* Not yet implemented. */
-  return 0;
+  int load_avg_100 = FP_TO_INT_ROUND_ZERO(MULT_MIX(load_avg, 100));
+
+
+  return load_avg_100;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
@@ -527,9 +531,11 @@ int
 thread_get_recent_cpu (void) 
 {
   /* Not yet implemented. */
-  return 0;
+  struct thread *cur = thread_current ();
+  int recent_cpu_100 = FP_TO_INT_ROUND_ZERO(MULT_MIX(cur->recent_cpu, 100));
+  return recent_cpu_100;
 }
-
+
 /* Idle thread.  Executes when no other thread is ready to run.
 
    The idle thread is initially put on the ready list by
