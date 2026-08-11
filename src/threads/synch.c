@@ -206,6 +206,32 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
+  if (lock->holder != NULL) {
+    struct thread *current_thread = thread_current ();
+    current_thread->lock_waiting_on = lock;
+
+    struct thread *holder_thread = lock->holder;
+
+    for (int i = 0; i < 8; i++){
+      if (holder_thread == NULL) {
+        break;
+      }
+
+      if (current_thread->priority > holder_thread->priority) {
+        holder_thread->priority = current_thread->priority;
+      } else {
+        break;
+      }
+
+      if (holder_thread->lock_waiting_on != NULL) {
+        holder_thread = holder_thread->lock_waiting_on->holder;
+      } else {
+        break;
+      }
+    }
+  }
+
+
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
 }
