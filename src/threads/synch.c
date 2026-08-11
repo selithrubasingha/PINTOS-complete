@@ -206,8 +206,11 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
+
+
+  struct thread *current_thread = thread_current ();
+
   if (lock->holder != NULL) {
-    struct thread *current_thread = thread_current ();
     current_thread->lock_waiting_on = lock;
 
     struct thread *holder_thread = lock->holder;
@@ -233,7 +236,11 @@ lock_acquire (struct lock *lock)
 
 
   sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
+  current_thread->lock_waiting_on = NULL;
+
+  list_push_back (&current_thread->locks_held, &lock->elem);
+
+  lock->holder = current_thread;
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
