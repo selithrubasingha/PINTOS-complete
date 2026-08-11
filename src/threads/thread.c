@@ -368,7 +368,7 @@ update_priority (struct thread *t)
       if (!list_empty (&held_lock->semaphore.waiters))
         {
           struct thread *top = list_entry (
-              list_max (&held_lock->semaphore.waiters, thread_compare_priority, NULL),
+              list_min (&held_lock->semaphore.waiters, thread_compare_priority, NULL),
               struct thread, elem);
           if (top->priority > max_priority)
             max_priority = top->priority;

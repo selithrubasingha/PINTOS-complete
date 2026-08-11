@@ -105,28 +105,52 @@ sema_try_down (struct semaphore *sema)
    and wakes up one thread of those waiting for SEMA, if any.
 
    This function may be called from an interrupt handler. */
+
 void
 sema_up (struct semaphore *sema) 
 {
   enum intr_level old_level;
+  struct thread *unblocked = NULL;
 
   ASSERT (sema != NULL);
 
   old_level = intr_disable ();
 
-  
   if (!list_empty (&sema->waiters)) 
     {
-      struct thread *highest_priority_thread = list_entry(list_max (&sema->waiters, thread_compare_priority, NULL), struct thread, elem);
-      list_remove (&highest_priority_thread->elem);
-      thread_unblock (highest_priority_thread);
+      unblocked = list_entry (list_min (&sema->waiters, thread_compare_priority, NULL), struct thread, elem);
+      list_remove (&unblocked->elem);
+      thread_unblock (unblocked);
     } 
   
   sema->value++;
   intr_set_level (old_level);
 
-
+  if (!intr_context () && unblocked != NULL && thread_should_yield (thread_current ()->priority))
+    thread_yield ();
 }
+// void
+// sema_up (struct semaphore *sema) 
+// {
+//   enum intr_level old_level;
+
+//   ASSERT (sema != NULL);
+
+//   old_level = intr_disable ();
+
+  
+//   if (!list_empty (&sema->waiters)) 
+//     {
+//       struct thread *highest_priority_thread = list_entry(list_min (&sema->waiters, thread_compare_priority, NULL), struct thread, elem);
+//       list_remove (&highest_priority_thread->elem);
+//       thread_unblock (highest_priority_thread);
+//     } 
+  
+//   sema->value++;
+//   intr_set_level (old_level);
+
+
+// }
 
 static void sema_test_helper (void *sema_);
 
@@ -382,7 +406,7 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
 
   if (!list_empty (&cond->waiters)){
     // highest priority thread waiting on the condition variable
-    struct list_elem *highest_priority_elem = list_max (&cond->waiters, cond_compare_priority, NULL);
+    struct list_elem *highest_priority_elem = list_min (&cond->waiters, cond_compare_priority, NULL);
     list_remove (highest_priority_elem);
     struct semaphore_elem *highest_priority_waiter = list_entry (highest_priority_elem, struct semaphore_elem, elem);
     sema_up (&highest_priority_waiter->semaphore);
