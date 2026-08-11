@@ -506,6 +506,8 @@ void
 thread_set_nice (int nice ) 
 {
 
+  enum intr_level old_level = intr_disable (); /* Turn OFF interrupts */
+
   struct thread *cur = thread_current ();
   cur->nice = nice;
 
@@ -518,6 +520,9 @@ thread_set_nice (int nice )
     cur->priority = PRI_MAX;
   else if (cur->priority < PRI_MIN) 
     cur->priority = PRI_MIN;
+
+
+  intr_set_level (old_level); /* Turn ON interrupts BEFORE yielding */
 
   if (thread_should_yield (cur->priority))
     thread_yield ();
@@ -539,7 +544,7 @@ int
 thread_get_load_avg (void) 
 {
   /* Not yet implemented. */
-  int load_avg_100 = FP_TO_INT_ROUND_ZERO(MULT_MIX(load_avg, 100));
+  int load_avg_100 = FP_TO_INT_ROUND_NEAREST(MULT_MIX(load_avg, 100));
 
 
   return load_avg_100;
@@ -551,7 +556,7 @@ thread_get_recent_cpu (void)
 {
   /* Not yet implemented. */
   struct thread *cur = thread_current ();
-  int recent_cpu_100 = FP_TO_INT_ROUND_ZERO(MULT_MIX(cur->recent_cpu, 100));
+  int recent_cpu_100 = FP_TO_INT_ROUND_NEAREST(MULT_MIX(cur->recent_cpu, 100));
   return recent_cpu_100;
 }
 
