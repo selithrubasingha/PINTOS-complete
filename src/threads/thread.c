@@ -465,7 +465,9 @@ thread_set_priority (int new_priority)
     return;
   }
 
+
   enum intr_level old_level = intr_disable ();
+
   struct thread *cur = thread_current ();
   cur->base_priority = new_priority;
   update_priority (cur);   /* recompute effective priority from base + donations */
@@ -501,9 +503,26 @@ thread_get_priority (void)
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED) 
+thread_set_nice (int nice ) 
 {
-  /* Not yet implemented. */
+
+  struct thread *cur = thread_current ();
+  cur->nice = nice;
+
+  // recalculate the priority using the beautifull equation 
+  int recent_cpu_divided = FP_TO_INT_ROUND_ZERO(DIV_MIX(cur->recent_cpu, 4));
+  cur->priority = PRI_MAX - recent_cpu_divided - (cur->nice * 2);
+
+  // Ensure priority is within bounds
+  if (cur->priority > PRI_MAX) 
+    cur->priority = PRI_MAX;
+  else if (cur->priority < PRI_MIN) 
+    cur->priority = PRI_MIN;
+
+  if (thread_should_yield (cur->priority))
+    thread_yield ();
+
+
 }
 
 /* Returns the current thread's nice value. */
