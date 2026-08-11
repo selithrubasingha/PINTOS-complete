@@ -137,12 +137,14 @@ thread_start (void)
 
 /* Called by the timer interrupt handler at each timer tick.
    Thus, this function runs in an external interrupt context. */
+/* Called by the timer interrupt handler at each timer tick.
+   Thus, this function runs in an external interrupt context. */
 void
 thread_tick (void) 
 {
   struct thread *t = thread_current ();
 
-  /* --- EXISTING STATISTICS CODE (KEEP THIS) --- */
+  /* Update statistics. */
   if (t == idle_thread)
     idle_ticks++;
 #ifdef USERPROG
@@ -151,7 +153,6 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
-  /* -------------------------------------------- */
 
   /* --- MLFQS HEARTBEAT --- */
   if (thread_mlfqs) 
@@ -161,24 +162,54 @@ thread_tick (void)
       /* 1. EVERY SINGLE TICK: Increment recent_cpu by 1 for the running thread */
       if (t != idle_thread) 
         {
-          // TODO: Use ADD_MIX to add 1 to t->recent_cpu
+          t->recent_cpu = ADD_MIX(t->recent_cpu, 1);
         }
 
       /* 2. EVERY 100TH TICK (1 Second): Update load_avg and all recent_cpus */
       if (ticks % TIMER_FREQ == 0) 
         {
-          // TODO: Calculate 'ready_threads'. 
-          // (Hint: list_size(&ready_list) + 1 if the current thread is not the idle_thread)
+          // list_size(&ready_list) + 1 if the current thread is not the idle_thread
+          int ready_threads = list_size(&ready_list) + (t != idle_thread ? 1 : 0); 
 
-          // TODO: Calculate the new global load_avg using the formula
+          // Calculate the new global load_avg using the formula
+          int term1 = DIV_MIX(MULT_MIX(load_avg, 59), 60);
+          int term2 = DIV_MIX(INT_TO_FP(ready_threads), 60);
+          load_avg = ADD_FP(term1, term2);
           
-          // TODO: Iterate through `all_list` and recalculate recent_cpu for EVERY thread.
+          // Iterate through `all_list` and recalculate recent_cpu for EVERY thread.
+          struct list_elem *e;
+          for (e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e)) 
+            {
+              struct thread *iter = list_entry(e, struct thread, allelem);
+              if (iter != idle_thread) 
+                {
+                  int load_avg_2 = MULT_MIX(load_avg, 2); 
+                  int fraction = DIV_FP(load_avg_2, ADD_MIX(load_avg_2, 1));
+                  iter->recent_cpu = ADD_MIX(MULT_FP(fraction, iter->recent_cpu), iter->nice);
+                }
+            }
         }
 
       /* 3. EVERY 4TH TICK: Update priority for all threads */
       if (ticks % 4 == 0) 
         {
-          // TODO: Iterate through `all_list` and recalculate priority for EVERY thread.
+          // Iterate through `all_list` and recalculate priority for EVERY thread.
+          struct list_elem *e;
+          for (e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e)) 
+            {
+              struct thread *iter = list_entry(e, struct thread, allelem);
+              if (iter != idle_thread) 
+                {
+                  int recent_cpu_divided = FP_TO_INT_ROUND_ZERO(DIV_MIX(iter->recent_cpu, 4));
+                  iter->priority = PRI_MAX - recent_cpu_divided - (iter->nice * 2);
+
+                  // Ensure priority is within bounds
+                  if (iter->priority > PRI_MAX) 
+                    iter->priority = PRI_MAX;
+                  else if (iter->priority < PRI_MIN) 
+                    iter->priority = PRI_MIN;
+                }
+            }
         }
     }
   /* ----------------------- */
@@ -187,6 +218,7 @@ thread_tick (void)
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
 }
+
 
 /* Prints thread statistics. */
 void
